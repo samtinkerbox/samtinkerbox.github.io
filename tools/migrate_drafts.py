@@ -18,7 +18,9 @@ from pathlib import Path
 DRAFTS = Path.home() / "workspace/company/affiliate-site/content/drafts"
 POSTS = Path(__file__).resolve().parent.parent / "_posts"
 
-FNAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})_(.+?)(_ja)?\.md$")
+FNAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})_(.+?)\.md$")
+# Japanese variants are explicitly excluded — samtinkerbox.github.io is EN-only.
+SKIP_SUFFIX = "_ja"
 
 CATEGORY_RULES = [
     (("runway", "kling", "sora", "pika", "video-generator", "animation", "video"),
@@ -82,11 +84,11 @@ def extract_title_and_description(content: str) -> tuple[str, str]:
     return title, description
 
 
-def build_frontmatter(*, title: str, description: str, date: str, slug: str, lang: str, pin: bool) -> str:
+def build_frontmatter(*, title: str, description: str, date: str, slug: str, pin: bool) -> str:
     cats = infer_categories(slug)
     tags = extract_tags(slug)
     date_iso = f"{date} 09:00:00 +0900"
-    permalink = f"/posts/{slug}{'-ja' if lang == 'ja' else ''}/"
+    permalink = f"/posts/{slug}/"
     parts = [
         "---",
         f'title: "{title.replace(chr(34), chr(39))}"',
@@ -96,8 +98,6 @@ def build_frontmatter(*, title: str, description: str, date: str, slug: str, lan
         f"tags: [{', '.join(tags)}]",
         f"permalink: {permalink}",
     ]
-    if lang == "ja":
-        parts.append("lang: ja")
     if pin:
         parts.append("pin: true")
     parts.append("---\n")
@@ -113,26 +113,26 @@ def strip_title_and_marker(content: str) -> str:
 
 
 def main() -> None:
-    entries: dict[tuple[str, str], tuple[str, Path]] = {}
+    entries: dict[str, tuple[str, Path]] = {}
     for f in sorted(DRAFTS.glob("*.md")):
+        if f.stem.endswith(SKIP_SUFFIX):
+            print(f"SKIP (JA variant): {f.name}")
+            continue
         m = FNAME_RE.match(f.name)
         if not m:
             print(f"SKIP (bad filename): {f.name}")
             continue
-        date, slug, ja = m.groups()
-        lang = "ja" if ja else "en"
-        key = (slug, lang)
+        date, slug = m.groups()
         # Keep latest
-        if key not in entries or entries[key][0] < date:
-            entries[key] = (date, f)
+        if slug not in entries or entries[slug][0] < date:
+            entries[slug] = (date, f)
 
-    print(f"Dedup → {len(entries)} unique (slug, lang) pairs")
+    print(f"Dedup → {len(entries)} unique English slugs")
 
-    # Wipe existing _posts except placeholder and the bootstrap runway-vs-kling
     for p in POSTS.glob("*.md"):
         p.unlink()
 
-    for (slug, lang), (date, src) in sorted(entries.items()):
+    for slug, (date, src) in sorted(entries.items()):
         raw = src.read_text(encoding="utf-8")
         title, description = extract_title_and_description(raw)
         if not title:
@@ -144,10 +144,9 @@ def main() -> None:
             description=description or title,
             date=date,
             slug=slug,
-            lang=lang,
-            pin=(lang == "en" and slug == "runway-vs-kling"),
+            pin=(slug == "runway-vs-kling"),
         )
-        out_name = f"{date}-{slug}{'-ja' if lang == 'ja' else ''}.md"
+        out_name = f"{date}-{slug}.md"
         out = POSTS / out_name
         out.write_text(fm + "\n" + body, encoding="utf-8")
         print(f"  {out_name} ← {src.name}")
