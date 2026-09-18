@@ -1,27 +1,33 @@
-# Bundler cache
-.bundle
-vendor
-Gemfile.lock
+# Credentials & secrets
+.env
+*.pickle
+credentials.json
+token.pickle
+credentials/
 
-# Jekyll cache
-.jekyll-cache
-.jekyll-metadata
-_site
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
 
-# RubyGems
-*.gem
-
-# NPM dependencies
-node_modules
+# Node
+node_modules/
 package-lock.json
 
-# IDE configurations
-.idea
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
-!.vscode/tasks.json
+# Logs
+logs/
+*.log
 
-# Misc
-_sass/vendors
-assets/js/dist
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
